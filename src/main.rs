@@ -64,6 +64,7 @@ impl LogisticRegression {
     }
 }
 
+#[derive(Clone)]
 struct DataPoint {
     id: u32,
     label: Label,
@@ -83,29 +84,44 @@ enum Label {
 }
 
 const DATA_FILE: &str = "breast_cancer_wisconsin_diagnostic/wdbc.data";
+const TRAINING_SAMPLES: usize = (569.0 / 1.2) as usize;
 
 fn main() {
+    assert!(
+        TRAINING_SAMPLES < 569,
+        "Training samples exceed the total number of samples"
+    );
+
     let start = Instant::now();
 
     // Load data and labels from a file ../breast_cancer_wisconsin_diagnosis/wbcd.data
     let data = load_data(DATA_FILE);
     let labels: Vec<Label> = data.iter().map(|dp| dp.label.clone()).collect();
 
+    // Shuffle the data
+    use rand::seq::SliceRandom;
+    let mut rng = rand::thread_rng();
+    let mut data: Vec<_> = data.iter().cloned().collect();
+
+    data.shuffle(&mut rng);
+
+    // Split data into training and testing sets
+    let test_data = data[TRAINING_SAMPLES..].to_vec();
+    let test_labels = labels[TRAINING_SAMPLES..].to_vec();
+    let train_data = data[..TRAINING_SAMPLES].to_vec();
+    let train_labels = labels[..TRAINING_SAMPLES].to_vec();
+
     let mut model = LogisticRegression::new(data[0].len());
-    model.train(data, labels, 1000, 0.01);
+    model.train(train_data, train_labels, 100, 0.01);
 
     // Test the model with loaded data
-    let test_data = load_data(DATA_FILE);
     let mut times_correct = 0;
-
-    for dp in &test_data {
+    for (dp, label) in test_data.iter().zip(test_labels.iter()) {
         let prediction = model.predict(&dp.features);
-        let label = match dp.label {
-            Label::Malignant => 1.0,
-            Label::Benign => 0.0,
+        let correct = match label {
+            Label::Malignant => prediction > 0.5,
+            Label::Benign => prediction <= 0.5,
         };
-
-        let correct = (prediction - label).abs() < 0.5;
         if correct {
             times_correct += 1;
         }
