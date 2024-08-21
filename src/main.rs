@@ -1,6 +1,7 @@
 use std::{
     fs::File,
     io::{BufRead as _, BufReader},
+    time::Instant,
 };
 
 struct LogisticRegression {
@@ -84,6 +85,8 @@ enum Label {
 const DATA_FILE: &str = "breast_cancer_wisconsin_diagnostic/wdbc.data";
 
 fn main() {
+    let start = Instant::now();
+
     // Load data and labels from a file ../breast_cancer_wisconsin_diagnosis/wbcd.data
     let data = load_data(DATA_FILE);
     let labels: Vec<Label> = data.iter().map(|dp| dp.label.clone()).collect();
@@ -128,6 +131,9 @@ fn main() {
     let total_samples = test_data.len();
     let accuracy = times_correct as f64 / total_samples as f64;
     println!("Accuracy: {:.2}%", accuracy * 100.0);
+
+    let duration = start.elapsed();
+    println!("Time elapsed: {:?}", duration);
 }
 
 fn load_data(filename: &str) -> Vec<DataPoint> {
