@@ -37,6 +37,8 @@ impl LogisticRegression {
                     Label::Malignant => 1.0 - prediction,
                     Label::Benign => 0.0 - prediction,
                 };
+
+                // Update weights and bias using gradient descent
                 self.bias += lr * error;
                 for j in 0..self.weights.len() {
                     self.weights[j] += lr * error * data[i].features[j];
@@ -84,13 +86,13 @@ enum Label {
 
 const DATA_FILE: &str = "breast_cancer_wisconsin_diagnostic/wdbc.data";
 const TOTAL_SAMPLES: usize = 569;
-const TRAINING_SAMPLES: usize = (0.8 * TOTAL_SAMPLES as f64) as usize;
-const SIMULATION_COUNT: usize = 100;
+const TRAINING_SAMPLES: usize = 400;
+const SIMULATION_COUNT: usize = 1000;
 
 fn main() {
     assert!(
-        TRAINING_SAMPLES < 569,
-        "Training samples exceed the total number of samples"
+        TRAINING_SAMPLES < TOTAL_SAMPLES,
+        "Training samples should be less than total samples"
     );
 
     let mut accuracies = Vec::new();
