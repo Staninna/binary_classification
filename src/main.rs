@@ -1,7 +1,6 @@
 use std::{
     fs::File,
     io::{BufRead as _, BufReader},
-    time::Instant,
 };
 
 struct LogisticRegression {
@@ -84,7 +83,9 @@ enum Label {
 }
 
 const DATA_FILE: &str = "breast_cancer_wisconsin_diagnostic/wdbc.data";
-const TRAINING_SAMPLES: usize = (569.0 / 1.2) as usize;
+const TOTAL_SAMPLES: usize = 569;
+const TRAINING_SAMPLES: usize = (0.8 * TOTAL_SAMPLES as f64) as usize;
+const SIMULATION_COUNT: usize = 100;
 
 fn main() {
     assert!(
@@ -92,64 +93,84 @@ fn main() {
         "Training samples exceed the total number of samples"
     );
 
-    let start = Instant::now();
+    let mut accuracies = Vec::new();
 
-    // Load data and labels from a file ../breast_cancer_wisconsin_diagnosis/wbcd.data
-    let data = load_data(DATA_FILE);
-    let labels: Vec<Label> = data.iter().map(|dp| dp.label.clone()).collect();
+    for _ in 0..SIMULATION_COUNT {
+        // Load data and labels from a file ../breast_cancer_wisconsin_diagnosis/wbcd.data
+        let data = load_data(DATA_FILE);
+        let labels: Vec<Label> = data.iter().map(|dp| dp.label.clone()).collect();
 
-    // Shuffle the data
-    use rand::seq::SliceRandom;
-    let mut rng = rand::thread_rng();
-    let mut data: Vec<_> = data.iter().cloned().collect();
+        // Shuffle the data
+        use rand::seq::SliceRandom;
+        let mut rng = rand::thread_rng();
+        let mut data: Vec<_> = data.iter().cloned().collect();
 
-    data.shuffle(&mut rng);
+        data.shuffle(&mut rng);
 
-    // Split data into training and testing sets
-    let test_data = data[TRAINING_SAMPLES..].to_vec();
-    let test_labels = labels[TRAINING_SAMPLES..].to_vec();
-    let train_data = data[..TRAINING_SAMPLES].to_vec();
-    let train_labels = labels[..TRAINING_SAMPLES].to_vec();
+        // Split data into training and testing sets
+        let test_data = data[TRAINING_SAMPLES..].to_vec();
+        let test_labels = labels[TRAINING_SAMPLES..].to_vec();
+        let train_data = data[..TRAINING_SAMPLES].to_vec();
+        let train_labels = labels[..TRAINING_SAMPLES].to_vec();
 
-    let mut model = LogisticRegression::new(data[0].len());
-    model.train(train_data, train_labels, 100, 0.01);
+        let mut model = LogisticRegression::new(data[0].len());
+        model.train(train_data, train_labels, 100, 0.01);
 
-    // Test the model with loaded data
-    let mut times_correct = 0;
-    for (dp, label) in test_data.iter().zip(test_labels.iter()) {
-        let prediction = model.predict(&dp.features);
-        let correct = match label {
-            Label::Malignant => prediction > 0.5,
-            Label::Benign => prediction <= 0.5,
-        };
-        if correct {
-            times_correct += 1;
+        // Test the model with loaded data
+        let mut times_correct = 0;
+        for (dp, label) in test_data.iter().zip(test_labels.iter()) {
+            let prediction = model.predict(&dp.features);
+            let correct = match label {
+                Label::Malignant => prediction > 0.5,
+                Label::Benign => prediction <= 0.5,
+            };
+            if correct {
+                times_correct += 1;
+            }
+
+            println!(
+                "ID: {}, Prediction: {:.4}, Label: {} -> {}",
+                dp.id,
+                prediction,
+                match dp.label {
+                    Label::Malignant => "Malignant",
+                    Label::Benign => "Benign",
+                },
+                if correct {
+                    // green color for correct predictions
+                    "\x1b[32mCorrect\x1b[0m"
+                } else {
+                    // red color for incorrect predictions
+                    "\x1b[31mIncorrect\x1b[0m"
+                }
+            );
         }
 
-        println!(
-            "ID: {}, Prediction: {:.4}, Label: {} -> {}",
-            dp.id,
-            prediction,
-            match dp.label {
-                Label::Malignant => "Malignant",
-                Label::Benign => "Benign",
-            },
-            if correct {
-                // green color for correct predictions
-                "\x1b[32mCorrect\x1b[0m"
-            } else {
-                // red color for incorrect predictions
-                "\x1b[31mIncorrect\x1b[0m"
-            }
-        );
+        let total_samples = test_data.len();
+        let accuracy = times_correct as f64 / total_samples as f64;
+        println!("Accuracy: {:.2}%", accuracy * 100.0);
+        accuracies.push(accuracy);
     }
 
-    let total_samples = test_data.len();
-    let accuracy = times_correct as f64 / total_samples as f64;
-    println!("Accuracy: {:.2}%", accuracy * 100.0);
+    let avg_accuracy: f64 = accuracies.iter().sum::<f64>() / accuracies.len() as f64;
 
-    let duration = start.elapsed();
-    println!("Time elapsed: {:?}", duration);
+    println!("\n{:<20} | {:<20}", "Statistic", "Value");
+    println!("{:-<20}-+-{:-<20}", "", "");
+    println!("{:<20} | {:.4}%", "Average Accuracy", avg_accuracy * 100.0);
+
+    // Print best 10 and worst 10 accuracies
+    let mut accuracies = accuracies;
+    accuracies.sort_by(|a, b| b.partial_cmp(a).unwrap());
+
+    println!("\n{:<20} | {:<20}", "Best accuracies%", "Worst accuracies%");
+    println!("{:-<20}-+-{:-<20}", "", "");
+    for i in 0..10 {
+        println!(
+            "{:<20.4} | {:<20.4}",
+            accuracies[i] * 100.0,
+            accuracies[accuracies.len() - 1 - i] * 100.0
+        );
+    }
 }
 
 fn load_data(filename: &str) -> Vec<DataPoint> {
