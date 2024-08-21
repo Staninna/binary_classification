@@ -29,7 +29,18 @@ impl LogisticRegression {
     }
 
     fn train(&mut self, data: Vec<DataPoint>, labels: Vec<Label>, epochs: usize, lr: f64) {
-        for epoch in 0..epochs {
+        for _ in 0..TRAIN_CYCLES {
+            use rand::seq::SliceRandom;
+            let mut rng = rand::thread_rng();
+            let mut data: Vec<_> = data.iter().cloned().collect();
+            data.shuffle(&mut rng);
+
+            self.train_epoch(&data, &labels, epochs, lr);
+        }
+    }
+
+    fn train_epoch(&mut self, data: &[DataPoint], labels: &[Label], epochs: usize, lr: f64) {
+        for _ in 0..epochs {
             // Update weights and bias using gradient descent
             for i in 0..data.len() {
                 let prediction = self.predict(&data[i].features);
@@ -44,24 +55,7 @@ impl LogisticRegression {
                     self.weights[j] += lr * error * data[i].features[j];
                 }
             }
-
-            // Print the loss after each epoch
-            let loss = self.compute_loss(&data, &labels);
-            println!("Epoch {}: Loss: {:.4}", epoch, loss);
         }
-    }
-
-    fn compute_loss(&self, data: &[DataPoint], labels: &[Label]) -> f64 {
-        let mut loss = 0.0;
-        for i in 0..data.len() {
-            let prediction = self.predict(&data[i].features);
-            let error = match labels[i] {
-                Label::Malignant => 1.0 - prediction,
-                Label::Benign => 0.0 - prediction,
-            };
-            loss += error * error;
-        }
-        loss
     }
 }
 
@@ -84,14 +78,14 @@ enum Label {
     Benign,
 }
 
-const DATA_FILE: &str = "breast_cancer_wisconsin_diagnostic/wdbc.data";
-const TOTAL_SAMPLES: usize = 569;
-const TRAINING_SAMPLES: usize = 400;
-const SIMULATION_COUNT: usize = 1000;
+const DATA_FILE: &str = "breast_cancer_wisconsin_diagnostic/wdbc.data"; // Path to data file
+const TRAINING_SAMPLES: usize = 400; // Number of samples to train on
+const SIMULATION_COUNT: usize = 1000; // Number of times to run the simulation/amout of agents to run
+const TRAIN_CYCLES: usize = 10; // Number of times to go trough data each epoch
 
 fn main() {
     assert!(
-        TRAINING_SAMPLES < TOTAL_SAMPLES,
+        TRAINING_SAMPLES < 569,
         "Training samples should be less than total samples"
     );
 
