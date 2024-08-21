@@ -154,19 +154,21 @@ fn main() {
 
     let avg_accuracy: f64 = accuracies.iter().sum::<f64>() / accuracies.len() as f64;
 
-    println!("\n{:<20} | {:<20}", "Statistic", "Value");
-    println!("{:-<20}-+-{:-<20}", "", "");
+    println!("{:-<20}-+-{:-<22}", "", "");
     println!("{:<20} | {:.4}%", "Average Accuracy", avg_accuracy * 100.0);
 
     // Print best 10 and worst 10 accuracies
     let mut accuracies = accuracies;
     accuracies.sort_by(|a, b| b.partial_cmp(a).unwrap());
 
-    println!("\n{:<20} | {:<20}", "Best accuracies%", "Worst accuracies%");
-    println!("{:-<20}-+-{:-<20}", "", "");
+    println!(
+        "\n{:<20} | {:<22}",
+        "Best accuracies in %", "Worst accuracies in %"
+    );
+    println!("{:-<20}-+-{:-<22}", "", "");
     for i in 0..10 {
         println!(
-            "{:<20.4} | {:<20.4}",
+            "{:<20.4} | {:<22.4}",
             accuracies[i] * 100.0,
             accuracies[accuracies.len() - 1 - i] * 100.0
         );
